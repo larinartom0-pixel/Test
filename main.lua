@@ -3,24 +3,18 @@ local HttpService = game:GetService("HttpService")
 
 local user = "larinartom0-pixel"
 local repo = "Test"
--- Посилання на твої файли (тепер з урахуванням папки scripts)
 local rawUrl = "https://raw.githubusercontent.com/" .. user .. "/" .. repo .. "/main/"
 local scriptsFolderUrl = rawUrl .. "scripts/"
 local apiUrl = "https://api.github.com/repos/" .. user .. "/" .. repo .. "/contents/scripts"
 
--- 1. Завантаження даних
-local onlineVersion = "1.0"
+-- 1. Завантаження Changelog
 local changelogText = "Не вдалося завантажити список змін."
-
-pcall(function()
-    onlineVersion = game:HttpGet(rawUrl .. "version.txt"):gsub("%s+", "")
-end)
 pcall(function()
     changelogText = game:HttpGet(scriptsFolderUrl .. "changelog.txt")
 end)
 
 local Window = OrionLib:MakeWindow({
-    Name = "🚀 lilhub | v" .. onlineVersion, 
+    Name = "🚀 lilhub | v1.0", -- Версія тепер просто текстом
     HidePremium = false, 
     SaveConfig = true, 
     ConfigFolder = "lilhub",
@@ -34,6 +28,36 @@ local function LoadScripts()
     local ok, response = pcall(function() return game:HttpGet(apiUrl) end)
     if ok then
         local files = HttpService:JSONDecode(response)
+        for _, file in pairs(files) do
+            -- Додаємо тільки .lua файли (music.lua з'явиться тут автоматично)
+            if file.name:sub(-4) == ".lua" then
+                ScriptsTab:AddButton({
+                    Name = "🚀 " .. file.name:gsub(".lua", ""),
+                    Callback = function()
+                        loadstring(game:HttpGet(file.download_url))()
+                    end
+                })
+            end
+        end
+    end
+end
+LoadScripts()
+
+--- ВКЛАДКА ІНФОРМАЦІЇ ---
+local InfoTab = Window:MakeTab({ Name = "Info", Icon = "rbxassetid://4483345998" })
+InfoTab:AddLabel("Гравець: " .. game.Players.LocalPlayer.Name)
+InfoTab:AddSection({ Name = "Що нового" })
+InfoTab:AddLabel(changelogText) -- Тут буде текст із твого файлу
+
+-- Кнопка перезапуску
+InfoTab:AddButton({
+    Name = "🔄 Перезапустити хаб",
+    Callback = function()
+        loadstring(game:HttpGet(rawUrl .. "main.lua"))()
+    end
+})
+
+OrionLib:Init()
         for _, file in pairs(files) do
             -- Додаємо кнопку тільки якщо це .lua файл
             if file.name:sub(-4) == ".lua" then
