@@ -1,12 +1,10 @@
--- 1. Перевірка завантаження Rayfield
-local RayfieldURL = "https://sirius.menu/rayfield"
-local rawRayfield = game:HttpGet(RayfieldURL)
-local Rayfield = loadstring(rawRayfield)()
-
-if not Rayfield then
-    warn("ПОМИЛКА: Не вдалося завантажити Rayfield Library!")
-    return
+-- ПЕРЕВІРКА: Очищення старого вікна
+if _G.LilHubInstance then
+    pcall(function() _G.LilHubInstance:Destroy() end)
 end
+
+-- Завантаження бібліотеки Rayfield (з резервним посиланням)
+local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/shlexware/Rayfield/main/source'))()
 
 local HttpService = game:GetService("HttpService")
 local user = "larinartom0-pixel"
@@ -14,12 +12,8 @@ local repo = "Test"
 local rawUrl = "https://raw.githubusercontent.com/" .. user .. "/" .. repo .. "/main/"
 local apiUrl = "https://api.github.com/repos/" .. user .. "/" .. repo .. "/contents/scripts"
 
--- 2. Безпечне отримання версії
 local onlineVersion = "1.0"
-pcall(function()
-    local ver = game:HttpGet(rawUrl .. "version.txt")
-    if ver and #ver > 0 then onlineVersion = ver:gsub("%s+", "") end
-end)
+pcall(function() onlineVersion = game:HttpGet(rawUrl .. "version.txt"):gsub("%s+", "") end)
 
 local Window = Rayfield:CreateWindow({
    Name = "🚀 lilhub | v" .. onlineVersion,
@@ -27,13 +21,32 @@ local Window = Rayfield:CreateWindow({
    LoadingSubtitle = "by Larinssk",
    ConfigurationSaving = { Enabled = false }
 })
+_G.LilHubInstance = Window
 
 local ScriptsTab = Window:CreateTab("Скрипти", 4483362458)
 
--- 3. Функція завантаження з перевіркою API
 local function LoadScripts()
     local ok, response = pcall(function() return game:HttpGet(apiUrl) end)
-    
+    if ok then
+        local files = HttpService:JSONDecode(response)
+        for _, file in pairs(files) do
+            if file.name:sub(-4) == ".lua" then
+                ScriptsTab:CreateButton({
+                    Name = "🚀 " .. file.name:gsub(".lua", ""),
+                    Callback = function() loadstring(game:HttpGet(file.download_url))() end,
+                })
+            end
+        end
+    else
+        ScriptsTab:CreateButton({
+            Name = "🚀 Infinite Yield (Manual)",
+            Callback = function() loadstring(game:HttpGet(rawUrl .. "scripts/iy.lua"))() end,
+        })
+    end
+end
+LoadScripts()
+
+Rayfield:Notify({Title = "lilhub", Content = "Запущено!", Duration = 3})
     if ok and response and not response:find("message") then
         local files = HttpService:JSONDecode(response)
         for _, file in pairs(files) do
