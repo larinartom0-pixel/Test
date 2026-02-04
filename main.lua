@@ -1,174 +1,87 @@
-local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
 local HttpService = game:GetService("HttpService")
-
--- Налаштування твого репозиторію
 local user = "larinartom0-pixel"
 local repo = "Test"
 local rawUrl = "https://raw.githubusercontent.com/" .. user .. "/" .. repo .. "/main/"
 local scriptsFolderUrl = rawUrl .. "scripts/"
 local apiUrl = "https://api.github.com/repos/" .. user .. "/" .. repo .. "/contents/scripts"
 
--- 1. Завантаження твого Changelog (замість version.txt)
-local changelogText = "Завантаження змін..."
-pcall(function()
-    changelogText = game:HttpGet(scriptsFolderUrl .. "changelog.txt")
+-- Створюємо GUI вручну
+local ScreenGui = Instance.new("ScreenGui")
+local MainFrame = Instance.new("Frame")
+local Title = Instance.new("TextLabel")
+local ScriptsList = Instance.new("ScrollingFrame")
+local UIListLayout = Instance.new("UIListLayout")
+local CloseButton = Instance.new("TextButton")
+
+ScreenGui.Name = "LilHubCustom"
+ScreenGui.Parent = game.CoreGui
+
+MainFrame.Name = "MainFrame"
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainFrame.Position = UDim2.new(0.5, -150, 0.5, -100)
+MainFrame.Size = UDim2.new(0, 300, 0, 250)
+MainFrame.Active = true
+MainFrame.Draggable = true
+
+Title.Parent = MainFrame
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+Title.Text = "🚀 LILHUB CUSTOM | v1.0"
+Title.TextColor3 = Color3.new(1, 1, 1)
+
+CloseButton.Parent = MainFrame
+CloseButton.Position = UDim2.new(1, -30, 0, 0)
+CloseButton.Size = UDim2.new(0, 30, 0, 30)
+CloseButton.Text = "X"
+CloseButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+CloseButton.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
+
+ScriptsList.Parent = MainFrame
+ScriptsList.Position = UDim2.new(0, 10, 0, 40)
+ScriptsList.Size = UDim2.new(1, -20, 1, -50)
+ScriptsList.BackgroundTransparency = 1
+ScriptsList.CanvasSize = UDim2.new(0, 0, 2, 0)
+
+UIListLayout.Parent = ScriptsList
+UIListLayout.Padding = UDim.new(0, 5)
+
+-- Функція створення кнопки
+local function CreateButton(name, callback)
+    local btn = Instance.new("TextButton")
+    btn.Parent = ScriptsList
+    btn.Size = UDim2.new(1, 0, 0, 30)
+    btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    btn.Text = name
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.MouseButton1Click:Connect(callback)
+end
+
+-- Завантаження скриптів з GitHub API
+local ok, response = pcall(function() return game:HttpGet(apiUrl) end)
+if ok then
+    local files = HttpService:JSONDecode(response)
+    for _, file in pairs(files) do
+        if file.name:sub(-4) == ".lua" then
+            CreateButton("🚀 Run: " .. file.name, function()
+                loadstring(game:HttpGet(file.download_url))()
+            end)
+        end
+    end
+else
+    -- Резервна кнопка для музики
+    CreateButton("🎵 Music (Manual)", function()
+        loadstring(game:HttpGet(scriptsFolderUrl .. "music.lua"))()
+    end)
+end
+
+-- Кнопка для Changelog
+CreateButton("📜 Show Changelog", function()
+    local text = game:HttpGet(scriptsFolderUrl .. "changelog.txt")
+    print("CHANGELOG:\n" .. text)
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "Changelog",
+        Text = "Текст виведено в консоль!",
+        Duration = 5
+    })
 end)
-
--- Створення вікна (Версія просто написана текстом "1.0")
-local Window = OrionLib:MakeWindow({
-    Name = "🚀 lilhub | v1.0", 
-    HidePremium = false, 
-    SaveConfig = true, 
-    ConfigFolder = "lilhub",
-    IntroText = "lilhub"
-})
-
---- ВКЛАДКА СКРИПТІВ ---
-local ScriptsTab = Window:MakeTab({ Name = "Скрипти", Icon = "rbxassetid://4483345998" })
-
-local function LoadScripts()
-    -- Отримуємо список файлів з папки scripts
-    local ok, response = pcall(function() return game:HttpGet(apiUrl) end)
-    if ok then
-        local files = HttpService:JSONDecode(response)
-        for _, file in pairs(files) do
-            -- Шукаємо файли .lua (твоя музика та інші)
-            if file.name:sub(-4) == ".lua" then
-                ScriptsTab:AddButton({
-                    Name = "🚀 " .. file.name:gsub(".lua", ""),
-                    Callback = function()
-                        loadstring(game:HttpGet(file.download_url))()
-                    end
-                })
-            end
-        end
-    else
-        ScriptsTab:AddLabel("Помилка GitHub API")
-    end
-end
-LoadScripts()
-
---- ВКЛАДКА ІНФО ---
-local InfoTab = Window:MakeTab({ Name = "Info", Icon = "rbxassetid://4483345998" })
-InfoTab:AddLabel("Гравець: " .. game.Players.LocalPlayer.Name)
-InfoTab:AddSection({ Name = "Останні зміни" })
-InfoTab:AddLabel(changelogText) -- Тут покаже текст із твого файлу
-
--- Кнопка перезапуску
-InfoTab:AddButton({
-    Name = "🔄 Перезапустити хаб",
-    Callback = function()
-        loadstring(game:HttpGet(rawUrl .. "main.lua"))()
-    end
-})
-
-OrionLib:Init()
-                        loadstring(game:HttpGet(file.download_url))()
-                    end
-                })
-            end
-        end
-    end
-end
-LoadScripts()
-
---- ВКЛАДКА ІНФОРМАЦІЇ ---
-local InfoTab = Window:MakeTab({ Name = "Info", Icon = "rbxassetid://4483345998" })
-InfoTab:AddLabel("Гравець: " .. game.Players.LocalPlayer.Name)
-InfoTab:AddSection({ Name = "Що нового" })
-InfoTab:AddLabel(changelogText) -- Тут буде текст із твого файлу
-
--- Кнопка перезапуску
-InfoTab:AddButton({
-    Name = "🔄 Перезапустити хаб",
-    Callback = function()
-        loadstring(game:HttpGet(rawUrl .. "main.lua"))()
-    end
-})
-
-OrionLib:Init()
-        for _, file in pairs(files) do
-            -- Додаємо кнопку тільки якщо це .lua файл
-            if file.name:sub(-4) == ".lua" then
-                ScriptsTab:AddButton({
-                    Name = "🚀 " .. file.name:gsub(".lua", ""),
-                    Callback = function()
-                        loadstring(game:HttpGet(file.download_url))()
-                    end
-                })
-            end
-        end
-    else
-        -- Резерв, якщо API не відповідає
-        ScriptsTab:AddButton({
-            Name = "Запустити Music (Резерв)",
-            Callback = function() loadstring(game:HttpGet(scriptsFolderUrl .. "music.lua"))() end
-        })
-    end
-end
-LoadScripts()
-
---- ВКЛАДКА ІНФОРМАЦІЇ ---
-local InfoTab = Window:MakeTab({ Name = "Info", Icon = "rbxassetid://4483345998" })
-InfoTab:AddLabel("Гравець: " .. game.Players.LocalPlayer.Name)
-InfoTab:AddLabel("Версія: " .. onlineVersion)
-InfoTab:AddSection({ Name = "Що нового" })
-InfoTab:AddLabel(changelogText)
-
--- Кнопка перезапуску
-InfoTab:AddButton({
-    Name = "🔄 Перезапустити хаб",
-    Callback = function()
-        loadstring(game:HttpGet(rawUrl .. "main.lua"))()
-    end
-})
-
-OrionLib:Init()
-                    Name = "🚀 " .. file.name:gsub(".lua", ""),
-                    Callback = function()
-                        loadstring(game:HttpGet(file.download_url))()
-                    end
-                })
-            end
-        end
-    else
-        -- Резервна кнопка на випадок збою API
-        ScriptsTab:AddButton({
-            Name = "Infinite Yield (Резерв)",
-            Callback = function() loadstring(game:HttpGet(rawUrl .. "scripts/iy.lua"))() end
-        })
-    end
-end
-LoadScripts()
-
---- ВКЛАДКА ІНФОРМАЦІЇ ---
-local InfoTab = Window:MakeTab({ Name = "Info", Icon = "rbxassetid://4483345998" })
-InfoTab:AddLabel("Гравець: " .. game.Players.LocalPlayer.Name)
-InfoTab:AddLabel("Версія: " .. onlineVersion)
-
-InfoTab:AddSection({ Name = "Що нового" })
-InfoTab:AddLabel(changelogText)
-
--- Кнопка перезапуску (просто завантажує заново)
-InfoTab:AddButton({
-    Name = "🔄 Перезапустити хаб",
-    Callback = function()
-        loadstring(game:HttpGet(rawUrl .. "main.lua"))()
-    end
-})
-
---- LIVE UPDATE (Перевірка раз на хвилину) ---
-task.spawn(function()
-    while task.wait(60) do
-        local ok, newVer = pcall(function() return game:HttpGet(rawUrl .. "version.txt"):gsub("%s+", "") end)
-        if ok and newVer ~= onlineVersion then
-            OrionLib:MakeNotification({
-                Name = "Оновлення!",
-                Content = "Доступна версія " .. newVer .. ". Натисніть Перезапустити в Info.",
-                Time = 10
-            })
-        end
-    end
-end)
-
-OrionLib:Init()
