@@ -1,219 +1,84 @@
--- ПЕРЕВІРКА: Очищення старого вікна
-if _G.LilHubInstance then
-    pcall(function() _G.LilHubInstance:Destroy() end)
-end
-
--- Завантаження бібліотеки Rayfield (з резервним посиланням)
-local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/shlexware/Rayfield/main/source'))()
-
+local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
 local HttpService = game:GetService("HttpService")
+
+-- Твої дані GitHub
 local user = "larinartom0-pixel"
 local repo = "Test"
 local rawUrl = "https://raw.githubusercontent.com/" .. user .. "/" .. repo .. "/main/"
 local apiUrl = "https://api.github.com/repos/" .. user .. "/" .. repo .. "/contents/scripts"
 
+-- Отримання версії та тексту оновлень
 local onlineVersion = "1.0"
-pcall(function() onlineVersion = game:HttpGet(rawUrl .. "version.txt"):gsub("%s+", "") end)
+local changelogText = "Завантаження змін..."
+pcall(function()
+    onlineVersion = game:HttpGet(rawUrl .. "version.txt"):gsub("%s+", "")
+    changelogText = game:HttpGet(rawUrl .. "changelog.txt")
+end)
 
-local Window = Rayfield:CreateWindow({
-   Name = "🚀 lilhub | v" .. onlineVersion,
-   LoadingTitle = "Синхронізація...",
-   LoadingSubtitle = "by Larinssk",
-   ConfigurationSaving = { Enabled = false }
+local Window = OrionLib:MakeWindow({
+    Name = "🚀 lilhub | v" .. onlineVersion, 
+    HidePremium = false, 
+    SaveConfig = true, 
+    ConfigFolder = "lilhub",
+    IntroText = "lilhub"
 })
-_G.LilHubInstance = Window
 
-local ScriptsTab = Window:CreateTab("Скрипти", 4483362458)
+--- ВКЛАДКА СКРИПТІВ ---
+local ScriptsTab = Window:MakeTab({ Name = "Скрипти", Icon = "rbxassetid://4483345998" })
 
+-- Автоматичне додавання кнопок з папки scripts
 local function LoadScripts()
     local ok, response = pcall(function() return game:HttpGet(apiUrl) end)
     if ok then
         local files = HttpService:JSONDecode(response)
         for _, file in pairs(files) do
             if file.name:sub(-4) == ".lua" then
-                ScriptsTab:CreateButton({
+                ScriptsTab:AddButton({
                     Name = "🚀 " .. file.name:gsub(".lua", ""),
-                    Callback = function() loadstring(game:HttpGet(file.download_url))() end,
+                    Callback = function()
+                        loadstring(game:HttpGet(file.download_url))()
+                    end
                 })
             end
         end
     else
-        ScriptsTab:CreateButton({
-            Name = "🚀 Infinite Yield (Manual)",
-            Callback = function() loadstring(game:HttpGet(rawUrl .. "scripts/iy.lua"))() end,
+        -- Резервна кнопка на випадок збою API
+        ScriptsTab:AddButton({
+            Name = "Infinite Yield (Резерв)",
+            Callback = function() loadstring(game:HttpGet(rawUrl .. "scripts/iy.lua"))() end
         })
     end
 end
 LoadScripts()
 
-Rayfield:Notify({Title = "lilhub", Content = "Запущено!", Duration = 3})
-    if ok and response and not response:find("message") then
-        local files = HttpService:JSONDecode(response)
-        for _, file in pairs(files) do
-            if file.name:sub(-4) == ".lua" then
-                ScriptsTab:CreateButton({
-                    Name = "🚀 " .. file.name:gsub(".lua", ""),
-                    Callback = function()
-                        local scriptCode = game:HttpGet(file.download_url)
-                        if scriptCode then
-                            loadstring(scriptCode)()
-                        end
-                    end,
-                })
-            end
-        end
-    else
-        ScriptsTab:CreateLabel("GitHub API обмежив доступ або папка порожня")
-        -- Резервна кнопка, якщо API лежить
-        ScriptsTab:CreateButton({
-            Name = "Запустити Infinite Yield (Резерв)",
-            Callback = function()
-                loadstring(game:HttpGet(rawUrl .. "scripts/iy.lua"))()
-            end,
-        })
-    end
-end
+--- ВКЛАДКА ІНФОРМАЦІЇ ---
+local InfoTab = Window:MakeTab({ Name = "Info", Icon = "rbxassetid://4483345998" })
+InfoTab:AddLabel("Гравець: " .. game.Players.LocalPlayer.Name)
+InfoTab:AddLabel("Версія: " .. onlineVersion)
 
-LoadScripts()
+InfoTab:AddSection({ Name = "Що нового" })
+InfoTab:AddLabel(changelogText)
 
-Rayfield:Notify({Title = "lilhub", Content = "Запущено успішно!", Duration = 3})
-        for _, file in pairs(files) do
-            if file.name:sub(-4) == ".lua" then
-                ScriptsTab:CreateButton({
-                    Name = "🚀 " .. file.name:gsub(".lua", ""),
-                    Callback = function()
-                        loadstring(game:HttpGet(file.download_url))()
-                    end,
-                })
-            end
-        end
-    else
-        ScriptsTab:CreateLabel("Помилка API GitHub")
-    end
-end
-
-LoadScripts()
-
-local InfoTab = Window:CreateTab("Info", 4483362458)
-InfoTab:CreateLabel("Нік: " .. game.Players.LocalPlayer.Name)
-InfoTab:CreateLabel("Версія: " .. onlineVersion)
-
-Rayfield:Notify({Title = "lilhub", Content = "Готово!", Duration = 3})
-
-local function AutoLoadScripts()
-    local success, response = pcall(function() return game:HttpGet(apiUrl) end)
-    if success then
-        local files = HttpService:JSONDecode(response)
-        local count = 0
-        for _, file in pairs(files) do
-            if file.type == "file" and file.name:sub(-4) == ".lua" then
-                count = count + 1
-                ScriptsTab:CreateButton({
-                    Name = "🚀 " .. file.name:gsub(".lua", ""),
-                    Callback = function()
-                        loadstring(game:HttpGet(file.download_url))()
-                    end,
-                })
-            end
-        end
-        if count == 0 then ScriptsTab:CreateLabel("Папка 'scripts' порожня") end
-    else
-        ScriptsTab:CreateLabel("Помилка підключення до API GitHub")
-    end
-end
-AutoLoadScripts()
-
---- ВКЛАДКА 2: USER INFO ---
-local InfoTab = Window:CreateTab("User Info", 4483362458)
-InfoTab:CreateSection("Статистика")
-InfoTab:CreateLabel("Гравець: " .. game.Players.LocalPlayer.Name)
-InfoTab:CreateLabel("Поточна версія: " .. onlineVersion)
-
-InfoTab:CreateSection("Що нового (Changelog)")
-InfoTab:CreateLabel(changelogText)
-
---- ФУНКЦІЯ ПЕРЕЗАПУСКУ ---
-local function RebootHub()
-    if _G.LilHubInstance then 
-        _G.LilHubInstance:Destroy() 
-        _G.LilHubInstance = nil
-    end
-    task.wait(0.5)
-    loadstring(game:HttpGet(rawUrl .. "main.lua"))() 
-end
-
-InfoTab:CreateButton({
+-- Кнопка перезапуску (просто завантажує заново)
+InfoTab:AddButton({
     Name = "🔄 Перезапустити хаб",
-    Callback = RebootHub
+    Callback = function()
+        loadstring(game:HttpGet(rawUrl .. "main.lua"))()
+    end
 })
 
---- ЛОГІКА LIVE UPDATE (Кожну хвилину) ---
+--- LIVE UPDATE (Перевірка раз на хвилину) ---
 task.spawn(function()
-    while task.wait(60) do -- Перевірка раз на хвилину
-        local success, newVer = pcall(function() 
-            return game:HttpGet(rawUrl .. "version.txt"):gsub("%s+", "") 
-        end)
-        
-        if success and newVer ~= onlineVersion then
-            -- Створюємо термінове сповіщення
-            Rayfield:Notify({
-                Title = "🔔 ОНОВЛЕННЯ!",
-                Content = "Знайдено нову версію: " .. newVer .. ". Перейдіть у вкладку Update!",
-                Duration = 20
+    while task.wait(60) do
+        local ok, newVer = pcall(function() return game:HttpGet(rawUrl .. "version.txt"):gsub("%s+", "") end)
+        if ok and newVer ~= onlineVersion then
+            OrionLib:MakeNotification({
+                Name = "Оновлення!",
+                Content = "Доступна версія " .. newVer .. ". Натисніть Перезапустити в Info.",
+                Time = 10
             })
-
-            -- Додаємо спеціальну вкладку для оновлення
-            local UpdateTab = Window:CreateTab("⚠️ UPDATE", 4483362458)
-            UpdateTab:CreateSection("Доступна нова версія: " .. newVer)
-            UpdateTab:CreateButton({
-                Name = "♻️ ОНОВИТИ ТА ПЕРЕЗАПУСТИТИ",
-                Callback = RebootHub
-            })
-            break -- Вимикаємо таймер після виявлення оновлення
         end
     end
 end)
 
-Rayfield:Notify({Title = "lilhub", Content = "Хаб готовий до роботи!", Duration = 3})
-        for _, file in pairs(files) do
-            if file.type == "file" and file.name:sub(-4) == ".lua" then
-                count = count + 1
-                local cleanName = file.name:gsub(".lua", "") -- Назва без розширення
-                
-                ScriptsTab:CreateButton({
-                    Name = "Запустити: " .. cleanName,
-                    Callback = function()
-                        local s, err = pcall(function()
-                            loadstring(game:HttpGet(file.download_url))()
-                        end)
-                        if not s then
-                            Rayfield:Notify({Title = "Помилка", Content = "Не вдалося запустити " .. cleanName, Duration = 3})
-                        end
-                    end,
-                })
-            end
-        end
-        
-        if count == 0 then
-            ScriptsTab:CreateLabel("Скриптів у папці не знайдено")
-        end
-    else
-        ScriptsTab:CreateLabel("Помилка з'єднання з GitHub API")
-    end
-end
-
--- Запускаємо сканування
-AutoLoadScripts()
-
---- ВКЛАДКА 2: USER INFO ---
-local InfoTab = Window:CreateTab("User Info", 4483362458)
-InfoTab:CreateSection("Статистика")
-InfoTab:CreateLabel("Нік: " .. game.Players.LocalPlayer.Name)
-InfoTab:CreateLabel("Версія хабу: " .. onlineVersion)
-
--- Повідомлення про запуск
-Rayfield:Notify({
-    Title = "lilhub підключено!",
-    Content = "Знайдено скриптів: " .. folder,
-    Duration = 3
-})
+OrionLib:Init()
