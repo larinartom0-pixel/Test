@@ -1,39 +1,61 @@
--- ОЧИЩЕННЯ: Видаляємо старе вікно перед завантаженням (щоб не було дублікатів)
-if _G.LilHubInstance then
-    pcall(function() _G.LilHubInstance:Destroy() end)
+-- Повний фікс для main.lua
+local success, Rayfield = pcall(function() 
+    return loadstring(game:HttpGet('https://sirius.menu/rayfield'))() 
+end)
+
+if not success or not Rayfield then 
+    warn("Rayfield не завантажився!") 
+    return 
 end
 
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local HttpService = game:GetService("HttpService")
-
--- ДАНІ GITHUB
 local user = "larinartom0-pixel"
 local repo = "Test"
-local folder = "scripts"
 local rawUrl = "https://raw.githubusercontent.com/" .. user .. "/" .. repo .. "/main/"
-local apiUrl = "https://api.github.com/repos/" .. user .. "/" .. repo .. "/contents/" .. folder
+local apiUrl = "https://api.github.com/repos/" .. user .. "/" .. repo .. "/contents/scripts"
 
--- 1. ЗАВАНТАЖЕННЯ ДАНИХ (ВЕРСІЯ ТА CHANGELOG)
+-- Отримуємо версію
 local onlineVersion = "1.0"
-local changelogText = "Не вдалося завантажити список змін."
-
 pcall(function()
     onlineVersion = game:HttpGet(rawUrl .. "version.txt"):gsub("%s+", "")
-    changelogText = game:HttpGet(rawUrl .. "changelog.txt")
 end)
 
 local Window = Rayfield:CreateWindow({
    Name = "🚀 lilhub | v" .. onlineVersion,
-   LoadingTitle = "Синхронізація з сервером...",
+   LoadingTitle = "Завантаження...",
    LoadingSubtitle = "by Larinssk",
-   ConfigurationSaving = { Enabled = true, FolderName = "lilhub_configs", FileName = "Main" }
+   ConfigurationSaving = { Enabled = false }
 })
 
-_G.LilHubInstance = Window -- Зберігаємо вікно для подальшого видалення
-
---- ВКЛАДКА 1: СКРИПТИ (АВТОМАТИЧНА) ---
 local ScriptsTab = Window:CreateTab("Скрипти", 4483362458)
-ScriptsTab:CreateSection("Знайдені хмарні файли")
+
+-- Функція автозавантаження
+local function LoadScripts()
+    local ok, response = pcall(function() return game:HttpGet(apiUrl) end)
+    if ok then
+        local files = HttpService:JSONDecode(response)
+        for _, file in pairs(files) do
+            if file.name:sub(-4) == ".lua" then
+                ScriptsTab:CreateButton({
+                    Name = "🚀 " .. file.name:gsub(".lua", ""),
+                    Callback = function()
+                        loadstring(game:HttpGet(file.download_url))()
+                    end,
+                })
+            end
+        end
+    else
+        ScriptsTab:CreateLabel("Помилка API GitHub")
+    end
+end
+
+LoadScripts()
+
+local InfoTab = Window:CreateTab("Info", 4483362458)
+InfoTab:CreateLabel("Нік: " .. game.Players.LocalPlayer.Name)
+InfoTab:CreateLabel("Версія: " .. onlineVersion)
+
+Rayfield:Notify({Title = "lilhub", Content = "Готово!", Duration = 3})
 
 local function AutoLoadScripts()
     local success, response = pcall(function() return game:HttpGet(apiUrl) end)
