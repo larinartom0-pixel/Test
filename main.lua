@@ -1,20 +1,22 @@
 local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
 local HttpService = game:GetService("HttpService")
 
+-- Налаштування твого репозиторію
 local user = "larinartom0-pixel"
 local repo = "Test"
 local rawUrl = "https://raw.githubusercontent.com/" .. user .. "/" .. repo .. "/main/"
 local scriptsFolderUrl = rawUrl .. "scripts/"
 local apiUrl = "https://api.github.com/repos/" .. user .. "/" .. repo .. "/contents/scripts"
 
--- 1. Завантаження Changelog
-local changelogText = "Не вдалося завантажити список змін."
+-- 1. Завантаження твого Changelog (замість version.txt)
+local changelogText = "Завантаження змін..."
 pcall(function()
     changelogText = game:HttpGet(scriptsFolderUrl .. "changelog.txt")
 end)
 
+-- Створення вікна (Версія просто написана текстом "1.0")
 local Window = OrionLib:MakeWindow({
-    Name = "🚀 lilhub | v1.0", -- Версія тепер просто текстом
+    Name = "🚀 lilhub | v1.0", 
     HidePremium = false, 
     SaveConfig = true, 
     ConfigFolder = "lilhub",
@@ -25,15 +27,42 @@ local Window = OrionLib:MakeWindow({
 local ScriptsTab = Window:MakeTab({ Name = "Скрипти", Icon = "rbxassetid://4483345998" })
 
 local function LoadScripts()
+    -- Отримуємо список файлів з папки scripts
     local ok, response = pcall(function() return game:HttpGet(apiUrl) end)
     if ok then
         local files = HttpService:JSONDecode(response)
         for _, file in pairs(files) do
-            -- Додаємо тільки .lua файли (music.lua з'явиться тут автоматично)
+            -- Шукаємо файли .lua (твоя музика та інші)
             if file.name:sub(-4) == ".lua" then
                 ScriptsTab:AddButton({
                     Name = "🚀 " .. file.name:gsub(".lua", ""),
                     Callback = function()
+                        loadstring(game:HttpGet(file.download_url))()
+                    end
+                })
+            end
+        end
+    else
+        ScriptsTab:AddLabel("Помилка GitHub API")
+    end
+end
+LoadScripts()
+
+--- ВКЛАДКА ІНФО ---
+local InfoTab = Window:MakeTab({ Name = "Info", Icon = "rbxassetid://4483345998" })
+InfoTab:AddLabel("Гравець: " .. game.Players.LocalPlayer.Name)
+InfoTab:AddSection({ Name = "Останні зміни" })
+InfoTab:AddLabel(changelogText) -- Тут покаже текст із твого файлу
+
+-- Кнопка перезапуску
+InfoTab:AddButton({
+    Name = "🔄 Перезапустити хаб",
+    Callback = function()
+        loadstring(game:HttpGet(rawUrl .. "main.lua"))()
+    end
+})
+
+OrionLib:Init()
                         loadstring(game:HttpGet(file.download_url))()
                     end
                 })
