@@ -1,5 +1,4 @@
 local HttpService = game:GetService("HttpService")
-local StarterGui = game:GetService("StarterGui")
 local UserInputService = game:GetService("UserInputService")
 
 local user = "larinartom0-pixel"
@@ -8,18 +7,22 @@ local rawUrl = "https://raw.githubusercontent.com/" .. user .. "/" .. repo .. "/
 local scriptsFolderUrl = rawUrl .. "scripts/"
 local apiUrl = "https://api.github.com/repos/" .. user .. "/" .. repo .. "/contents/scripts"
 
--- Видаляємо старий інтерфейс
-local OldGui = game.CoreGui:FindFirstChild("LilHubCustom")
-if OldGui then OldGui:Destroy() end
+-- Поточна версія скрипта (змінюй її тут, коли оновлюєш код)
+local CURRENT_VERSION = "1.2" 
 
--- 1. СТВОРЕННЯ GUI
+-- 1. ВИДАЛЕННЯ СТАРОГО GUI ПРИ ПЕРЕЗАПУСКУ
+if game.CoreGui:FindFirstChild("LilHubCustom") then
+    game.CoreGui.LilHubCustom:Destroy()
+end
+
+-- 2. СТВОРЕННЯ GUI
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "LilHubCustom"
 ScreenGui.Parent = game.CoreGui
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 -- Кнопка відкриття (L)
 local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Name = "ToggleBtn"
 ToggleBtn.Parent = ScreenGui
 ToggleBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
 ToggleBtn.Position = UDim2.new(0, 10, 0.5, -25)
@@ -32,8 +35,124 @@ Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 12)
 
 -- Головне вікно
 local MainFrame = Instance.new("Frame")
-MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainFrame.Position = UDim2.new(0.5, -175, 0.5, -125)
+MainFrame.Size = UDim2.new(0, 350, 0, 250)
+MainFrame.Visible = false
+MainFrame.Active = true
+MainFrame.Draggable = true
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
+
+-- Заголовок
+local Title = Instance.new("TextLabel")
+Title.Parent = MainFrame
+Title.Size = UDim2.new(1, -40, 0, 35)
+Title.Position = UDim2.new(0, 10, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "🚀 lilhub | v" .. CURRENT_VERSION
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.Font = Enum.Font.GothamBold
+Title.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Вкладки та контент (Скрипти/Інфо)
+local ScriptsPage = Instance.new("ScrollingFrame")
+ScriptsPage.Parent = MainFrame
+ScriptsPage.Position = UDim2.new(0, 10, 0, 80)
+ScriptsPage.Size = UDim2.new(1, -20, 1, -90)
+ScriptsPage.BackgroundTransparency = 1
+ScriptsPage.CanvasSize = UDim2.new(0, 0, 0, 0)
+ScriptsPage.ScrollBarThickness = 2
+local ScriptsLayout = Instance.new("UIListLayout")
+ScriptsLayout.Parent = ScriptsPage
+ScriptsLayout.Padding = UDim.new(0, 5)
+
+--- ВІКНО ОНОВЛЕННЯ (Приховане за замовчуванням) ---
+local UpdateFrame = Instance.new("Frame")
+UpdateFrame.Parent = ScreenGui
+UpdateFrame.Size = UDim2.new(0, 250, 0, 150)
+UpdateFrame.Position = UDim2.new(0.5, -125, 0.5, -75)
+UpdateFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+UpdateFrame.Visible = false
+UpdateFrame.ZIndex = 10
+Instance.new("UICorner", UpdateFrame).CornerRadius = UDim.new(0, 15)
+
+local UpdTitle = Instance.new("TextLabel")
+UpdTitle.Parent = UpdateFrame
+UpdTitle.Size = UDim2.new(1, 0, 0, 40)
+UpdTitle.Text = "⚠️ Оновлення!"
+UpdTitle.TextColor3 = Color3.new(1, 1, 1)
+UpdTitle.Font = Enum.Font.GothamBold
+UpdTitle.BackgroundTransparency = 1
+
+local UpdText = Instance.new("TextLabel")
+UpdText.Parent = UpdateFrame
+UpdText.Position = UDim2.new(0, 10, 0, 40)
+UpdText.Size = UDim2.new(1, -20, 0, 50)
+UpdText.Text = "Доступна нова версія хабу. Перезапустити зараз?"
+UpdText.TextColor3 = Color3.fromRGB(200, 200, 200)
+UpdText.TextWrapped = true
+UpdText.BackgroundTransparency = 1
+
+local RebootBtn = Instance.new("TextButton")
+RebootBtn.Parent = UpdateFrame
+RebootBtn.Position = UDim2.new(0.1, 0, 0.7, 0)
+RebootBtn.Size = UDim2.new(0.8, 0, 0, 35)
+RebootBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+RebootBtn.Text = "ПЕРЕЗАПУСТИТИ"
+RebootBtn.TextColor3 = Color3.new(1, 1, 1)
+RebootBtn.Font = Enum.Font.GothamBold
+Instance.new("UICorner", RebootBtn)
+
+-- ФУНКЦІЯ ПОВНОГО ПЕРЕЗАПУСКУ
+local function FullReboot()
+    ScreenGui:Destroy() -- Видаляємо все
+    task.wait(0.1)
+    loadstring(game:HttpGet(rawUrl .. "main.lua"))() -- Качаємо наново
+end
+
+RebootBtn.MouseButton1Click:Connect(FullReboot)
+
+-- 3. ПЕРЕВІРКА ОНОВЛЕНЬ (Background loop)
+task.spawn(function()
+    while true do
+        local ok, onlineVer = pcall(function() 
+            return game:HttpGet(rawUrl .. "version.txt"):gsub("%s+", "") 
+        end)
+        
+        if ok and onlineVer ~= CURRENT_VERSION then
+            UpdateFrame.Visible = true -- Показуємо вікно оновлення
+            break -- Зупиняємо цикл, бо оновлення знайдено
+        end
+        task.wait(60) -- Перевірка кожну хвилину
+    end
+end)
+
+-- 4. ЗАВАНТАЖЕННЯ СКРИПТІВ
+local function LoadScripts()
+    local ok, response = pcall(function() return game:HttpGet(apiUrl) end)
+    if ok then
+        local files = HttpService:JSONDecode(response)
+        for _, file in pairs(files) do
+            if file.name:sub(-4) == ".lua" then
+                local btn = Instance.new("TextButton")
+                btn.Parent = ScriptsPage
+                btn.Size = UDim2.new(1, 0, 0, 35)
+                btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+                btn.Text = "🚀 " .. file.name:gsub(".lua", "")
+                btn.TextColor3 = Color3.new(1, 1, 1)
+                Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+                btn.MouseButton1Click:Connect(function()
+                    loadstring(game:HttpGet(file.download_url))()
+                end)
+            end
+        end
+    end
+end
+
+ToggleBtn.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
+LoadScripts()
+MainFrame.Visible = true
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 MainFrame.Position = UDim2.new(0.5, -175, 0.5, -125)
 MainFrame.Size = UDim2.new(0, 350, 0, 250)
