@@ -8,7 +8,7 @@ local rawUrl = "https://raw.githubusercontent.com/" .. user .. "/" .. repo .. "/
 local scriptsFolderUrl = rawUrl .. "scripts/"
 local apiUrl = "https://api.github.com/repos/" .. user .. "/" .. repo .. "/contents/scripts"
 
--- Видаляємо старий інтерфейс, якщо він є
+-- Видаляємо старий інтерфейс
 local OldGui = game.CoreGui:FindFirstChild("LilHubCustom")
 if OldGui then OldGui:Destroy() end
 
@@ -17,38 +17,38 @@ local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "LilHubCustom"
 ScreenGui.Parent = game.CoreGui
 
--- Кнопка відкриття (Міні-іконка)
+-- Кнопка відкриття (L)
 local ToggleBtn = Instance.new("TextButton")
 ToggleBtn.Name = "ToggleBtn"
 ToggleBtn.Parent = ScreenGui
 ToggleBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-ToggleBtn.Position = UDim2.new(0, 10, 0.5, -25) -- Зліва по центру
+ToggleBtn.Position = UDim2.new(0, 10, 0.5, -25)
 ToggleBtn.Size = UDim2.new(0, 50, 0, 50)
 ToggleBtn.Text = "L"
 ToggleBtn.TextSize = 25
 ToggleBtn.TextColor3 = Color3.new(1, 1, 1)
 ToggleBtn.Font = Enum.Font.GothamBold
-Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 12) -- М'які краї
+Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 12)
 
 -- Головне вікно
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-MainFrame.Position = UDim2.new(0.5, -175, 0.5, -125) -- Центр екрана
+MainFrame.Position = UDim2.new(0.5, -175, 0.5, -125)
 MainFrame.Size = UDim2.new(0, 350, 0, 250)
-MainFrame.Visible = false -- Спочатку приховане, поки не вирішимо, що показати
+MainFrame.Visible = false
 MainFrame.Active = true
 MainFrame.Draggable = true
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
 
--- Заголовок
+-- Заголовок (Спочатку пише Loading...)
 local Title = Instance.new("TextLabel")
 Title.Parent = MainFrame
 Title.Size = UDim2.new(1, -40, 0, 35)
 Title.Position = UDim2.new(0, 10, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "🚀 lilhub | v1.0"
+Title.Text = "🚀 lilhub | Loading..." -- Тимчасовий текст
 Title.TextColor3 = Color3.new(1, 1, 1)
 Title.Font = Enum.Font.GothamBold
 Title.TextXAlignment = Enum.TextXAlignment.Left
@@ -64,7 +64,7 @@ CloseBtn.TextColor3 = Color3.fromRGB(200, 50, 50)
 CloseBtn.Font = Enum.Font.GothamBold
 CloseBtn.TextSize = 18
 
--- Контейнер для кнопок вкладок
+-- Вкладки
 local TabsContainer = Instance.new("Frame")
 TabsContainer.Parent = MainFrame
 TabsContainer.Position = UDim2.new(0, 10, 0, 40)
@@ -89,7 +89,6 @@ local function CreateTabBtn(name, posInfo, callback)
     return btn
 end
 
--- Сторінки (Фрейми)
 local ScriptsPage = Instance.new("ScrollingFrame")
 ScriptsPage.Parent = MainFrame
 ScriptsPage.Position = UDim2.new(0, 10, 0, 80)
@@ -109,7 +108,7 @@ InfoPage.BackgroundTransparency = 1
 InfoPage.Visible = false
 local InfoText = Instance.new("TextLabel")
 InfoText.Parent = InfoPage
-InfoText.Size = UDim2.new(1, 0, 0, 0) -- Авто-розмір
+InfoText.Size = UDim2.new(1, 0, 0, 0)
 InfoText.BackgroundTransparency = 1
 InfoText.TextColor3 = Color3.fromRGB(200, 200, 200)
 InfoText.TextWrapped = true
@@ -117,7 +116,6 @@ InfoText.TextXAlignment = Enum.TextXAlignment.Left
 InfoText.TextYAlignment = Enum.TextYAlignment.Top
 InfoText.Font = Enum.Font.Code
 
--- Логіка перемикання вкладок
 local function SwitchTab(tabName)
     if tabName == "Scripts" then
         ScriptsPage.Visible = true
@@ -131,7 +129,6 @@ end
 CreateTabBtn("📜 Скрипти", "Left", function() SwitchTab("Scripts") end)
 CreateTabBtn("ℹ️ Інфо", "Right", function() SwitchTab("Info") end)
 
--- Функція додавання скриптів
 local function AddScriptButton(name, url)
     local btn = Instance.new("TextButton")
     btn.Parent = ScriptsPage
@@ -141,20 +138,27 @@ local function AddScriptButton(name, url)
     btn.TextColor3 = Color3.new(1, 1, 1)
     btn.Font = Enum.Font.Gotham
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
-    
-    btn.MouseButton1Click:Connect(function()
-        loadstring(game:HttpGet(url))()
-    end)
-    
+    btn.MouseButton1Click:Connect(function() loadstring(game:HttpGet(url))() end)
     ScriptsPage.CanvasSize = UDim2.new(0, 0, 0, ScriptsLayout.AbsoluteContentSize.Y)
 end
 ScriptsLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     ScriptsPage.CanvasSize = UDim2.new(0, 0, 0, ScriptsLayout.AbsoluteContentSize.Y)
 end)
 
--- 2. ЗАВАНТАЖЕННЯ ДАНИХ (АВТО-ОНОВЛЕННЯ СПИСКУ)
+-- 2. ОСНОВНА ЛОГІКА ЗАВАНТАЖЕННЯ
 local function LoadData()
-    -- Скрипти
+    -- А. Отримуємо ВЕРСІЮ з GitHub (щоб виправити баг із назвою)
+    local onlineVer = "1.0"
+    local hasVersionFile = pcall(function()
+        local v = game:HttpGet(rawUrl .. "version.txt")
+        if v and #v > 0 then
+            onlineVer = v:gsub("%s+", "") -- Видаляємо пробіли
+        end
+    end)
+    -- Оновлюємо заголовок вікна реальною версією
+    Title.Text = "🚀 lilhub | v" .. onlineVer
+
+    -- Б. Завантажуємо скрипти
     local ok, response = pcall(function() return game:HttpGet(apiUrl) end)
     if ok then
         local files = HttpService:JSONDecode(response)
@@ -164,43 +168,37 @@ local function LoadData()
             end
         end
     else
-        AddScriptButton("Music (Offline/Error)", rawUrl .. "scripts/music.lua")
+        AddScriptButton("Music (Error Mode)", rawUrl .. "scripts/music.lua")
     end
     
-    -- Changelog (Розумна система)
+    -- В. Ченджлог і авто-відкриття
     local changelogContent = "Не вдалося завантажити."
     pcall(function() changelogContent = game:HttpGet(scriptsFolderUrl .. "changelog.txt") end)
-    InfoText.Text = changelogContent
-    -- Підганяємо розмір тексту
-    local textBounds = game:GetService("TextService"):GetTextSize(changelogContent, 14, Enum.Font.Code, Vector2.new(InfoPage.AbsoluteWindowSize.X, 10000))
+    
+    -- Додаємо версію в текст ченджлогу для краси
+    InfoText.Text = "Версія хабу: " .. onlineVer .. "\n\n" .. changelogContent
+    
+    local textBounds = game:GetService("TextService"):GetTextSize(InfoText.Text, 14, Enum.Font.Code, Vector2.new(InfoPage.AbsoluteWindowSize.X, 10000))
     InfoText.Size = UDim2.new(1, 0, 0, textBounds.Y + 20)
     InfoPage.CanvasSize = UDim2.new(0, 0, 0, textBounds.Y + 20)
 
-    -- Перевірка: чи бачив гравець цей чейнджлог?
+    -- Перевірка: чи змінилась версія або текст?
     local lastSeenLog = ""
     if isfile and isfile("lilhub_last_log.txt") then
         lastSeenLog = readfile("lilhub_last_log.txt")
     end
 
+    -- Якщо текст ченджлогу змінився - відкриваємо Інфо
     if changelogContent ~= lastSeenLog then
-        -- Нове оновлення! Показуємо вкладку Інфо
         SwitchTab("Info")
         if writefile then writefile("lilhub_last_log.txt", changelogContent) end
     else
-        -- Нічого нового, відразу до скриптів
         SwitchTab("Scripts")
     end
 end
 
--- 3. ФУНКЦІОНАЛ КНОПОК
-ToggleBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = not MainFrame.Visible
-end)
+ToggleBtn.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
+CloseBtn.MouseButton1Click:Connect(function() MainFrame.Visible = false end)
 
-CloseBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = false
-end)
-
--- Запуск
 LoadData()
-MainFrame.Visible = true -- Показуємо меню при старті
+MainFrame.Visible = true
