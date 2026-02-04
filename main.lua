@@ -1,18 +1,22 @@
 local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
 local HttpService = game:GetService("HttpService")
 
--- Твої дані GitHub
 local user = "larinartom0-pixel"
 local repo = "Test"
+-- Посилання на твої файли (тепер з урахуванням папки scripts)
 local rawUrl = "https://raw.githubusercontent.com/" .. user .. "/" .. repo .. "/main/"
+local scriptsFolderUrl = rawUrl .. "scripts/"
 local apiUrl = "https://api.github.com/repos/" .. user .. "/" .. repo .. "/contents/scripts"
 
--- Отримання версії та тексту оновлень
+-- 1. Завантаження даних
 local onlineVersion = "1.0"
-local changelogText = "Завантаження змін..."
+local changelogText = "Не вдалося завантажити список змін."
+
 pcall(function()
     onlineVersion = game:HttpGet(rawUrl .. "version.txt"):gsub("%s+", "")
-    changelogText = game:HttpGet(rawUrl .. "changelog.txt")
+end)
+pcall(function()
+    changelogText = game:HttpGet(scriptsFolderUrl .. "changelog.txt")
 end)
 
 local Window = OrionLib:MakeWindow({
@@ -26,14 +30,47 @@ local Window = OrionLib:MakeWindow({
 --- ВКЛАДКА СКРИПТІВ ---
 local ScriptsTab = Window:MakeTab({ Name = "Скрипти", Icon = "rbxassetid://4483345998" })
 
--- Автоматичне додавання кнопок з папки scripts
 local function LoadScripts()
     local ok, response = pcall(function() return game:HttpGet(apiUrl) end)
     if ok then
         local files = HttpService:JSONDecode(response)
         for _, file in pairs(files) do
+            -- Додаємо кнопку тільки якщо це .lua файл
             if file.name:sub(-4) == ".lua" then
                 ScriptsTab:AddButton({
+                    Name = "🚀 " .. file.name:gsub(".lua", ""),
+                    Callback = function()
+                        loadstring(game:HttpGet(file.download_url))()
+                    end
+                })
+            end
+        end
+    else
+        -- Резерв, якщо API не відповідає
+        ScriptsTab:AddButton({
+            Name = "Запустити Music (Резерв)",
+            Callback = function() loadstring(game:HttpGet(scriptsFolderUrl .. "music.lua"))() end
+        })
+    end
+end
+LoadScripts()
+
+--- ВКЛАДКА ІНФОРМАЦІЇ ---
+local InfoTab = Window:MakeTab({ Name = "Info", Icon = "rbxassetid://4483345998" })
+InfoTab:AddLabel("Гравець: " .. game.Players.LocalPlayer.Name)
+InfoTab:AddLabel("Версія: " .. onlineVersion)
+InfoTab:AddSection({ Name = "Що нового" })
+InfoTab:AddLabel(changelogText)
+
+-- Кнопка перезапуску
+InfoTab:AddButton({
+    Name = "🔄 Перезапустити хаб",
+    Callback = function()
+        loadstring(game:HttpGet(rawUrl .. "main.lua"))()
+    end
+})
+
+OrionLib:Init()
                     Name = "🚀 " .. file.name:gsub(".lua", ""),
                     Callback = function()
                         loadstring(game:HttpGet(file.download_url))()
